@@ -1,0 +1,57 @@
+name: FreeRADIUS + daloRADIUS
+version: "0.1.0"
+slug: freeradius
+description: FreeRADIUS 3 with daloRADIUS web UI, backed by SQLite. Single container, no external DB.
+url: https://github.com/qlphon/ha-addons/tree/main/freeradius
+arch:
+  - amd64
+
+# IMPORTANT: do NOT ship apparmor.txt and keep apparmor: false.
+# The presence of apparmor.txt in the add-on folder overrides this flag
+# and the Supervisor will load a custom profile (named <hex>_<slug>).
+# With no apparmor.txt AND apparmor: false, Supervisor runs the container
+# with --security-opt apparmor=unconfined, which is what we want: PHP-FPM's
+# flock() / scoreboard locking requires AppArmor 'k' permission which is
+# easy to miss in custom profiles.
+apparmor: false
+
+# No s6-overlay: we manage processes with a simple run.sh + trap SIGTERM.
+init: false
+
+# Give the container the privileges it needs. Because apparmor is off and
+# init is off, full_access mainly affects cgroup/devices access; keep true
+# so FreeRADIUS can bind privileged UDP ports cleanly.
+full_access: true
+
+# Needed so Apache2 can listen on container port 80 (mapped to host via ports)
+host_network: false
+
+startup: services
+boot: auto
+
+ports:
+  80/tcp: 8080
+  1812/udp: 1812
+  1813/udp: 1813
+
+ports_description:
+  80/tcp: daloRADIUS web UI
+  1812/udp: RADIUS authentication
+  1813/udp: RADIUS accounting
+
+# /data is the per-add-on persistent volume — SQLite DB lives there.
+# No extra map entries are needed for that; /data is always mounted.
+map:
+  - share:rw
+
+image: ghcr.io/qlphon/ha-addons/freeradius-{arch}
+
+options:
+  radius_shared_secret: "testing123"
+  daloradius_admin_password: "radius"
+  log_level: "info"
+
+schema:
+  radius_shared_secret: password
+  daloradius_admin_password: password
+  log_level: list(debug|info|warning|error)

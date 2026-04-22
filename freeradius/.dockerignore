@@ -1,0 +1,8 @@
+.git
+.github
+*.md
+CHANGELOG.md
+README.md
+DOCS.md
+.vscode
+.idea

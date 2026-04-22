@@ -1,0 +1,11 @@
+build_from:
+  amd64: debian:bookworm-slim
+
+# Ensure docker buildx emits the OCI labels HA and GHCR expect.
+labels:
+  org.opencontainers.image.title: "FreeRADIUS + daloRADIUS"
+  org.opencontainers.image.source: "https://github.com/qlphon/ha-addons"
+  org.opencontainers.image.licenses: "MIT"
+
+args:
+  TEMPIO_VERSION: "2024.11.0"

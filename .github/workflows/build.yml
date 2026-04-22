@@ -1,0 +1,71 @@
+name: Build and publish add-on images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "freeradius/**"
+      - ".github/workflows/build.yml"
+  pull_request:
+    paths:
+      - "freeradius/**"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read add-on version
+        id: meta
+        run: |
+          VERSION=$(yq -r '.version' freeradius/config.yaml)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Add-on version: ${VERSION}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./freeradius
+          file: ./freeradius/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          push: ${{ github.event_name != 'pull_request' }}
+          build-args: |
+            BUILD_FROM=debian:bookworm-slim
+            BUILD_ARCH=${{ matrix.arch }}
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+            BUILD_REF=${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ha-addons/freeradius-${{ matrix.arch }}:latest
+            ghcr.io/${{ github.repository_owner }}/ha-addons/freeradius-${{ matrix.arch }}:${{ steps.meta.outputs.version }}
+          cache-from: type=gha,scope=freeradius-${{ matrix.arch }}
+          cache-to:   type=gha,scope=freeradius-${{ matrix.arch }},mode=max

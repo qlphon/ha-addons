@@ -1,0 +1,42 @@
+# FreeRADIUS SQL module — SQLite backend
+# DB file lives in HA's per-addon persistent volume (/data) so it survives restarts.
+sql {
+    driver = "rlm_sql_sqlite"
+    dialect = "sqlite"
+
+    # Connection info
+    sqlite {
+        filename = "/data/radius.db"
+        busy_timeout = 200
+        # Let the module create the schema on first use if the file is missing.
+        bootstrap = "${modconfdir}/${..:instance}/main/sqlite/schema.sql"
+    }
+
+    # Connection pool — SQLite is file-based so keep it small
+    pool {
+        start = 1
+        min = 1
+        max = 5
+        spare = 2
+        uses = 0
+        lifetime = 0
+        idle_timeout = 60
+    }
+
+    # Table names (defaults, kept for clarity)
+    acct_table1    = "radacct"
+    acct_table2    = "radacct"
+    postauth_table = "radpostauth"
+    authcheck_table = "radcheck"
+    authreply_table = "radreply"
+    groupcheck_table = "radgroupcheck"
+    groupreply_table = "radgroupreply"
+    usergroup_table  = "radusergroup"
+
+    read_groups = yes
+    read_clients = yes
+    client_table = "nas"
+
+    # Use the standard query set shipped by FreeRADIUS for sqlite
+    $INCLUDE ${modconfdir}/${.:instance}/main/sqlite/queries.conf
+}

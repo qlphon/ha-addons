@@ -1,0 +1,14 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Build / local test
+*.log
+*.pid
+*.sqlite*
+/tmp/
+/data/
